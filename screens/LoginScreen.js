@@ -52,7 +52,8 @@ class LoginScreen extends Component {
               locale: result.additionalUserInfo.profile.locale,
               first_name: result.additionalUserInfo.profile.given_name,
               last_name: result.additionalUserInfo.profile.family_name,
-              created_at: Date.now()
+              created_at: Date.now(),
+              mainEnableNotification: false,
             })
             .then(function(snapshot){
               console.log('Snapshot', snapshot);

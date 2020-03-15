@@ -1,8 +1,9 @@
 import * as React from 'react';
 import {useCallback, useRef, useState, useEffect } from 'react';
-import { Text, View, Button, FlatList, StyleSheet, TextInput,TouchableOpacity, } from 'react-native';
+import {  AppState, Text, View, Button, FlatList, StyleSheet, TextInput,TouchableOpacity, } from 'react-native';
 import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import firebase from 'firebase'
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
@@ -12,9 +13,14 @@ import {Notifications} from 'expo'
 import ToggleSwitch from 'toggle-switch-react-native'
 import Card from '../assets/Components/Card';
 import MaterialButtonDanger from '../assets/Components/MaterialButtonDanger';
+import NetInfo from '@react-native-community/netinfo';
 
 
-
+function wait(timeout) {
+  return new Promise(resolve => {
+    setTimeout(resolve, timeout);
+  });
+}
 
 
 function DetailsScreen({ route, navigation }) {
@@ -51,7 +57,7 @@ function DetailsScreen({ route, navigation }) {
             .ref('/deviceID/9544900804').update({
               last_logged_in:Date.now()
             })}} />
-      <Button title="Go to Home" onPress={() => navigation.navigate('Home')} />
+      <Button title="Go to Home" onPress={() => navigation.navigate('dashboard')} />
       <Button title="Go back" onPress={() => navigation.goBack()} />
     </View>
   );
@@ -79,12 +85,21 @@ function Role({route, navigation }) {
 function Games({route, navigation }) {
     const [loading, setLoading] = useState(true);
     const [games, setGames] = useState([]);
-    const [count, setCount] = useState(1);
+    const [loading1, setLoading1] = useState(true);
+    const [internet, setInternet] = useState(true);
+    const [appState, setAppState] = useState('');
+    const [refreshing, setRefreshing] = React.useState(false);
     //const [refresh, setRefresh]= useState(1)
     const uid = firebase.auth().currentUser.uid;
     var currentUser = firebase.auth().currentUser;
 
     const refresh = route.params.refresh
+
+    const onRefresh = React.useCallback(() => {
+      setRefreshing(true);
+      console.log('refreshing')
+      wait(2000).then(() => setRefreshing(false));
+    }, [refreshing]);
 
    
     async function registerForPushNotificationsAsync() {
@@ -112,6 +127,7 @@ function Games({route, navigation }) {
       console.log(error);
     }
     } 
+    
     useEffect(() =>{
       async function mountComponent() {
 
@@ -120,7 +136,9 @@ function Games({route, navigation }) {
         await registerForPushNotificationsAsync()
       }
       mountComponent()
+      
     },[])
+    
     
 
     
@@ -128,6 +146,7 @@ function Games({route, navigation }) {
     useEffect(() => {
       
       var devices = []
+      setLoading1(true)
       function userDevice() {
         return new Promise(async (returnlist,reject) =>{
 
@@ -151,7 +170,7 @@ function Games({route, navigation }) {
         console.log('User list: ', list);
 
         returnlist(list)
-
+        setLoading1(false)
 
         })
         
@@ -193,41 +212,107 @@ function Games({route, navigation }) {
           console.log('renderdDEvices:', renderDevices)
           setGames(renderDevices);
           setLoading(false);
+          
         })
 
 
       }   
-      
-      
+      const unsubscribe = NetInfo.addEventListener(state => {
+        console.log('Connection type :::::::::::::::::::::::::::::::::::::::::::::::::', state.type);
+        console.log('Is connected?::::::::::::::::::::::::::::::::::::::::::::::::', state.isConnected);
+        setInternet(state.isConnected)
+      });
+      /*var unsubscribeAppState = AppState.addEventListener('change', state =>{
+        console.log('AppState:::::::::::::::::::::::::::::::::::::', state);
+        if(state == "active")
+        setAppState(Date.now())
+      })*/
+      var unsubscribeAppState = AppState.addEventListener('change', appStateChange);
+      function appStateChange(appState){
+        console.log('AppState:::::::::::::::::::::::::::::::::::::', appState);
+        if(appState == "active")
+        {
+          setAppState(Date.now())
+          //setAppState(appState)
+        }
+      }
+//----------------------------main notification start------------------------------------------------------------
+      const ref = firebase.database().ref(`/user/${uid}`)
+      ref.child('mainEnableNotification').on('value', changeNotification);
 
+
+      function changeNotification (snapshot){
+        
+        devices.forEach(async (dev) =>{
+          const ref1 = firebase.database().ref(`/user/deviceID/num${dev.devID}/linkedUser/${uid}/`)
+          console.log('notification change::::::::::', snapshot.val())
+          await ref1.update({
+            enableNotification: snapshot.val(),
+          })
+
+        })
+      }
+//----------------------------main notification end------------------------------------------------------------      
       return () => {
         
-      
+        unsubscribe();
+        //unsubscribeAppState();
+        unsubscribeAppState = AppState.removeEventListener('change', appStateChange);
         devices.forEach(dev =>{
           const ref = firebase.database().ref(`/user/deviceID/num${dev.devID}`);
           ref.off('value', updateTemp);
         })
+
         const ref1 = firebase.database().ref(`/user/${uid}/userDevices`)
         ref1.off('value', userDevice);
-      }     
-    },[uid,refresh]);
+        const ref = firebase.database().ref(`/user/${uid}`)
+        ref.child('mainEnableNotification').off('value', changeNotification);
+      }          
+    },[uid,refresh,internet,appState]);
 
+    useEffect(() =>{
+      const ref = firebase.database().ref(`/user/${uid}`)
+      ref.child('mainEnableNotification').on('value', changeNotification);
+      
+      
+      function changeNotification (snapshot){
+        
+        games.forEach(async (dev) =>{
+          const ref1 = firebase.database().ref(`/user/deviceID/num${dev.devID}/linkedUser/${uid}/`)
+          console.log('notification change::::::::::', snapshot.val())
+          await ref1.update({
+            enableNotification: snapshot.val(),
+          })
+
+        })
+      }
+    },[uid])
     
-    var addButtonClick = () =>{
-      navigation.navigate('addDevice')
-    }
-    navigation.setOptions({
-      headerRight: () => (
-        <MaterialButtonDanger
-          addButtonClick = {addButtonClick}
-        />
-      ),
-    });
+    
     const onclickDevice = (devID, nickname) => {
-      console.log('button Clicked:', devID, nickname)
-      navigation.navigate('Device Screen',{devID:devID, nickname:nickname})
+      if(!loading1){
+        console.log('button Clicked:', devID, nickname)
+        navigation.navigate('Device Screen',{devID:devID, nickname:nickname})
+      }
     }
-    
+
+/////////////render functions------------------------------------>start------------------------>
+    function renderInternet(){  
+      if(!internet){
+        return(
+          <Text> Connection lost! </Text>
+          )
+        }
+    }
+    function renderLoading1(){  
+      if(loading1){
+        return(
+          <Text> Refreshing!!!!!! </Text>
+          )
+          
+        }
+    }      
+/////////////render functions------------------------------------>end------------------------>
     if (loading) {
       return <Text>Loading devices...</Text>;
     }
@@ -241,9 +326,12 @@ function Games({route, navigation }) {
     temp = {item.temperature}
     nickname = {item.nickname}
     onclickDevice = {onclickDevice}
+    onRefresh={onRefresh}
+    refreshing={refreshing}  
     />)} 
     keyExtractor={(item, index) => index.toString()} />
-    <Button title='Sign Out' onPress={()=> firebase.auth().signOut()}/>
+    {renderLoading1()}
+    {renderInternet()}
       </View>
     )
 }
@@ -254,10 +342,15 @@ function deviceScreen({route,navigation}){
   const [temp, setTemp] = useState(null);
   const [listLogs, setListLogs] = useState([])
   const [tempLogs, setTempLogs] = useState(1);
+  const [refreshing, setRefreshing] = React.useState(false);
   const devID = route.params.devID
   const nickname = route.params.nickname
 
-  
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    console.log('refreshing')
+    wait(2000).then(() => setRefreshing(false));
+  }, [refreshing]);
   useEffect(() => {
     const getTemp = (snapshot) => {
       console.log('snapshot inside device screen',snapshot.val().devID)
@@ -343,14 +436,16 @@ function deviceScreen({route,navigation}){
       />
     ),
   });
-  
+//////render functions-------------------->Start----------------------------------------------------------->  
   function  displayFlatlist() {
     if (Array.isArray(tempLogs)) {
         return (
           
         <FlatList
           data={tempLogs}
-        renderItem={({item}) => <Text style={styles.item}>{item.date}         {item.time}          {item.temperature}</Text>}
+          renderItem={({item}) => <Text style={styles.item}>{item.date}         {item.time}          {item.temperature}</Text>}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
           keyExtractor={(item, index) => index.toString()}
         />
         ) 
@@ -365,9 +460,9 @@ function deviceScreen({route,navigation}){
           
           <Text>        Date                             Time                        temperature</Text>
         ) 
-        
     } 
   }
+        
   function  displayDloadButton() {
     if (Array.isArray(tempLogs)) {
         return (
@@ -380,7 +475,7 @@ function deviceScreen({route,navigation}){
         
     } 
   }
-  
+  ///////render functions ------------->end---------------------------------------------------------->
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}}>
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}}>
@@ -666,7 +761,7 @@ function addDevice({route,navigation}){
     }
     
   }
- 
+  
   return(
     <View style ={{padding: 10}}>
       <Text>Enter device ID</Text>
@@ -692,11 +787,114 @@ function addDevice({route,navigation}){
     </View>
   )  
 }
+function mainSettings(){
+  const [toggleSw, setToggleSw] = useState(false);
+  const uid = firebase.auth().currentUser.uid;
+  const ref1 = firebase.database().ref(`/user/${uid}`)
+  useEffect(() => {
+    const getNotification = async() =>{
+      try {
+        const snapshot = await ref1.child('mainEnableNotification').once('value');
+        if(snapshot.val())
+        {setToggleSw(snapshot.val())}
+      }
+      catch(err) {
+        console.log('err')
+      }
+    }
+    getNotification()
+    
+  },[])
+  return(
+  <View style ={{padding: 10}}>
+    <ToggleSwitch
+      isOn={toggleSw}
+      onColor="green"
+      offColor="red"
+      label="Allow Notification"
+      labelStyle={{ color: "black", fontWeight: "900", marginHorizontal: 5 }}
+      size="large"
+      onToggle={async(isOn) => {
+        console.log("changed to : ", isOn)
+        setToggleSw(isOn)
+        
+        await ref1.update({
+          mainEnableNotification: isOn,
+        })
+      }}
+      />
+      <Text></Text> 
+    <Button  title='Sign Out' onPress={()=> firebase.auth().signOut()}/>
+  </View>
+  )
+}
 
 
 
 const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
 
+function Home({navigation}) {
+  var addButtonClick = () =>{
+    navigation.navigate('addDevice')
+  }
+  navigation.setOptions({
+    headerRight: () => (
+      <MaterialButtonDanger
+        addButtonClick = {addButtonClick}
+      />
+    ),
+  });
+  return (
+    <Tab.Navigator>
+      <Tab.Screen name="flatList" 
+          component={Games}
+          initialParams={{ refresh: 42 }}
+          options={({ navigation, route }) => ({
+            
+          })} 
+      />
+      <Tab.Screen name="Main Settings" component={mainSettings} />
+    </Tab.Navigator>
+  );
+}
+
+export default function App() {
+
+  
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="Home" component={Home} /> 
+        
+        <Stack.Screen name="Device Screen" component={deviceScreen} />
+        <Stack.Screen name="Details" component={DetailsScreen} />
+        <Stack.Screen name="FirebaseDemo" component={Role} options={({route}) => ({title: route.params.userId})} />
+        
+        <Stack.Screen name="addDevice" component={addDevice} />
+        <Stack.Screen name="Logs screen" component={logsScreen} />
+        <Stack.Screen name="Settings" component={settings} />
+        
+      </Stack.Navigator>
+      
+    </NavigationContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+   flex: 1,
+   paddingTop: 22
+  },
+  item: {
+    padding: 10,
+    fontSize: 18,
+    height: 44,
+  },
+  
+})
+
+/*-----------------------------------------backup 12 mar 2020-------------------------------------------------
 export default function App() {
 
   
@@ -718,20 +916,13 @@ export default function App() {
         <Stack.Screen name="addDevice" component={addDevice} />
         <Stack.Screen name="Logs screen" component={logsScreen} />
         <Stack.Screen name="Settings" component={settings} />
+        <Stack.Screen name="Main Settings" component={mainSettings} />
       </Stack.Navigator>
+      <Tab.Navigator>
+        <Tab.Screen name="dashboard" component={Games} />
+        <Tab.Screen name="Main Settings" component={mainSettings} />
+      </Tab.Navigator>
     </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-   flex: 1,
-   paddingTop: 22
-  },
-  item: {
-    padding: 10,
-    fontSize: 18,
-    height: 44,
-  },
-  
-})
+*/
