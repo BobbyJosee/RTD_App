@@ -89,9 +89,11 @@ function Games({route, navigation }) {
     const [internet, setInternet] = useState(true);
     const [appState, setAppState] = useState('');
     const [refreshing, setRefreshing] = React.useState(false);
+    const [bgtime, setBgtime] = useState('');
     //const [refresh, setRefresh]= useState(1)
     const uid = firebase.auth().currentUser.uid;
     var currentUser = firebase.auth().currentUser;
+    
 
     const refresh = route.params.refresh
 
@@ -145,6 +147,7 @@ function Games({route, navigation }) {
 
     useEffect(() => {
       
+      var backgroundTime = Date.now()
       var devices = []
       setLoading1(true)
       function userDevice() {
@@ -232,10 +235,25 @@ function Games({route, navigation }) {
         console.log('AppState:::::::::::::::::::::::::::::::::::::', appState);
         if(appState == "active")
         {
+          console.log(backgroundTime)
           setAppState(Date.now())
+          var diffMs = Date.now() - backgroundTime;
+          console.log('difference in ms', diffMs)
+          var diffMins = Math.round(((diffMs % 86400000) % 3600000) / 60000);
+          console.log('difference in mins', diffMins)
+          if (diffMins >= 5){
+            //reload app()--------------
+            restartApp()
+          }
           //setAppState(appState)
+        }else if(AppState.currentState == "background"){
+          backgroundTime = Date.now()
+          console.log(backgroundTime)
+          setBgtime(backgroundTime)
         }
       }
+      
+
 //----------------------------main notification start------------------------------------------------------------
       const ref = firebase.database().ref(`/user/${uid}`)
       ref.child('mainEnableNotification').on('value', changeNotification);
@@ -343,13 +361,18 @@ function deviceScreen({route,navigation}){
   const [listLogs, setListLogs] = useState([])
   const [tempLogs, setTempLogs] = useState(1);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
   const devID = route.params.devID
   const nickname = route.params.nickname
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     console.log('refreshing')
-    wait(2000).then(() => setRefreshing(false));
+    wait(5000).then(() => {
+      setRefreshing(false)
+      console.log('done refreshing')
+    });
+    
   }, [refreshing]);
   useEffect(() => {
     const getTemp = (snapshot) => {
@@ -360,7 +383,7 @@ function deviceScreen({route,navigation}){
     }
     const ref = firebase.database().ref(`/user/deviceID/num${devID}`);
     ref.on('value', getTemp);
-    getLogTemp()
+    //getLogTemp()
     
     return () => {
       const ref = firebase.database().ref(`/user/deviceID/num${devID}`);
@@ -370,6 +393,7 @@ function deviceScreen({route,navigation}){
   },[])
   
   var getLogTemp = async() =>{
+    setLoading(true)
     const list1 =[]
     const ref = firebase.database().ref(`/rtdStorage/rtdID${devID}/fullLogs/`);
     const snapshot = await ref.once('value');
@@ -392,8 +416,9 @@ function deviceScreen({route,navigation}){
     })
     console.log('list 1                          ::::::::',list1)
     setTempLogs(list1.reverse())
+    setLoading(false)
   }
-  saveLogs = async () => {
+  var saveLogs = async () => {
     const list =[]
     
     const ref = firebase.database().ref(`/rtdStorage/rtdID${devID}/fullLogs/`);
@@ -428,6 +453,10 @@ function deviceScreen({route,navigation}){
     }
     //console.log('list logs                  :::::', listLogs)
   }
+  var hideLogs = () =>{
+    setTempLogs(1)
+
+  }
   navigation.setOptions({
     headerRight: () => (
       <Button
@@ -450,8 +479,18 @@ function deviceScreen({route,navigation}){
         />
         ) 
         
+    } else if(loading == true){
+      return(<Text>Loading........!</Text>)
     } else {
-        return <Text> Loading! </Text>;
+
+        return(
+          <Button
+          onPress={
+            () => getLogTemp()
+          }
+          title="Show Logs"
+          />
+        ) 
     }
   }
   function  displayText() {
@@ -475,6 +514,19 @@ function deviceScreen({route,navigation}){
         
     } 
   }
+
+  function  displayHideLogs() {
+    if (Array.isArray(tempLogs)) {
+        return (
+          <Button
+          onPress={() => hideLogs()}
+          title="Hide Logs"
+          />
+          
+        ) 
+        
+    } 
+  }
   ///////render functions ------------->end---------------------------------------------------------->
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}}>
@@ -486,6 +538,7 @@ function deviceScreen({route,navigation}){
         
         
         <View style={{ flex: 2, alignItems: 'center', justifyContent: 'center'}}>
+        {displayHideLogs()}
         {displayDloadButton()}
         {displayText()}
         {displayFlatlist()}
