@@ -17,7 +17,8 @@ function Card(props) {
 const styles = StyleSheet.create({
   container1: {
     backgroundColor: "rgba(230, 230, 230,1)",
-    flexDirection: "row"
+    flexDirection: "row",
+    borderColor :'#000'
   },
   rect: {
     flex: 0.26,

@@ -349,10 +349,11 @@ function Games({route, navigation }) {
 
     return (
       <View style={{ flex: 1, margin : 10 }} >
-        <View style={{flex :0.07 ,flexDirection :'row' , height : 20, marginTop:10 }} >
+        <View style={{height : "5%", flexDirection :'row' }} >
           <Text style ={{width :'30%', textAlign: 'center' , fontSize :13  }} >TEMPERATURE</Text>
           <Text style ={{width :'70%' , textAlign :'center' ,fontSize :13  }}>DEVICE</Text>
-        </View> 
+        </View>
+        <View style={{ height:'96%'}}>
           <FlatList data={games} 
              style={{}}     
             renderItem={({ item }) => (
@@ -369,6 +370,7 @@ function Games({route, navigation }) {
           />
         {renderLoading1()}
         {renderInternet()}
+        </View> 
       </View>
     )
 }
@@ -918,12 +920,15 @@ function Home({navigation}) {
     ),
   });
   return (
-    <Tab.Navigator mode="card" >
-      <Tab.Screen name="DASHBOARD" 
+    <Tab.Navigator >
+      <Tab.Screen name="flatList" 
           component={Games}
-          initialParams={{ refresh: 42 }} 
+          initialParams={{ refresh: 42 }}
+          options={({ navigation, route }) => ({
+            
+          })} 
       />
-      <Tab.Screen name="MAIN SETTINGS" component={mainSettings} />
+      <Tab.Screen name="Main Settings" component={mainSettings} />
     </Tab.Navigator>
   );
 }
@@ -935,7 +940,6 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator>
         <Stack.Screen name="Dashboard" component={Home} /> 
-        
         <Stack.Screen name="Device Screen" component={deviceScreen} />
         <Stack.Screen name="Details" component={DetailsScreen} />
         <Stack.Screen name="FirebaseDemo" component={Role} options={({route}) => ({title: route.params.userId})} />
