@@ -4,15 +4,12 @@ import { StyleSheet, TouchableOpacity, View, Text } from "react-native";
 function Card(props) {
   return (
     <TouchableOpacity 
-    onPress={() => props.onclickDevice(props.devID, props.nickname)}
-    style={[styles.container1, props.style]}>
-      
-        <Text style={styles.temprature}>{props.temp}</Text>
-      
-      
-        <Text style={styles.nickName}>{props.nickname}</Text>
-        
-      
+        onPress={() => props.onclickDevice(props.devID, props.nickname)}
+        style={[styles.container1, props.style]}
+    >  
+      <Text style={styles.temprature}>{props.temp} &#176;C</Text>
+      <Text style={styles.nickName}>{props.nickname}</Text>
+ 
     </TouchableOpacity>
   );
 }
@@ -29,7 +26,12 @@ const styles = StyleSheet.create({
   },
   temprature: {
     color: "#121212",
-    alignSelf: "center"
+    textAlign: "center",
+    width: '30%',
+    height : 50,
+    padding :10,
+    backgroundColor : '#cdcddced',
+    margin :10 
   },
   rect2: {
     flex: 0.74,
@@ -37,8 +39,12 @@ const styles = StyleSheet.create({
   },
   nickName: {
     color: "#121212",
-    marginTop: 28,
-    marginLeft: 73
+    textAlign: "center",
+    width: '70%',
+    height : 50,
+    padding :15,
+    margin  :10
+
   }
 });
 

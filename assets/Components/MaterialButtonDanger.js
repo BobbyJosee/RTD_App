@@ -1,14 +1,16 @@
 import React, { Component } from "react";
-import { StyleSheet, TouchableOpacity, Text } from "react-native";
+import { StyleSheet, TouchableOpacity ,Text} from "react-native";
 
 function MaterialButtonDanger(props) {
   return (
     <TouchableOpacity
     onPress={props.addButtonClick}
-    style={[styles.container, props.style]}>
-
-      <Text style={styles.caption}>+</Text>
-    </TouchableOpacity>
+    style ={{marginRight : 8 ,width : 37}}
+    >
+      <Text 
+      style ={{ backgroundColor : "#0756f3" ,color :'#fff' ,padding :5 ,fontSize : 18 ,textAlign :'center' ,borderRadius :100 }} 
+       >+ </Text>    
+      </TouchableOpacity>
   );
 }
 

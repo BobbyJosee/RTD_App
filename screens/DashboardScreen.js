@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useCallback, useRef, useState, useEffect } from 'react';
-import {  AppState, Text, View, Button, FlatList, StyleSheet, TextInput,TouchableOpacity, } from 'react-native';
+import {  AppState, Text, View, Button, FlatList, Header,StyleSheet, TextInput,TouchableOpacity, } from 'react-native';
 import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -314,42 +314,61 @@ function Games({route, navigation }) {
       }
     }
 
-/////////////render functions------------------------------------>start------------------------>
-    function renderInternet(){  
+/*########## render function starts ########### */
+  const renderInternet = () => {  
       if(!internet){
         return(
           <Text> Connection lost! </Text>
           )
         }
-    }
-    function renderLoading1(){  
+  }
+  const renderLoading1 = () =>{  
       if(loading1){
         return(
           <Text> Refreshing!!!!!! </Text>
           )
           
         }
-    }      
-/////////////render functions------------------------------------>end------------------------>
-    if (loading) {
-      return <Text>Loading devices...</Text>;
-    }
-   
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+  }      
+  /*########## render function ends ########### */
 
-    <FlatList data={games} 
-    renderItem={({ item }) => (<Card
-    devID = {item.devID}
-    temp = {item.temperature}
-    nickname = {item.nickname}
-    onclickDevice = {onclickDevice}
-    onRefresh={onRefresh}
-    refreshing={refreshing}  
-    />)} 
-    keyExtractor={(item, index) => index.toString()} />
-    {renderLoading1()}
-    {renderInternet()}
+  if (loading) {
+      return <Text>Loading devices...</Text>;
+  }
+  //change stylesheet to a different place
+
+    const renderStyles = StyleSheet.create({
+      headings : {
+        width: '50%',
+        height : 50,
+        padding :10,
+        backgroundColor : '#cdcddced',
+        margin :10 
+      }
+    }) 
+
+    return (
+      <View style={{ flex: 1, margin : 10 }} >
+        <View style={{flex :0.07 ,flexDirection :'row' , height : 20, marginTop:10 }} >
+          <Text style ={{width :'30%', textAlign: 'center' , fontSize :13  }} >TEMPERATURE</Text>
+          <Text style ={{width :'70%' , textAlign :'center' ,fontSize :13  }}>DEVICE</Text>
+        </View> 
+          <FlatList data={games} 
+             style={{}}     
+            renderItem={({ item }) => (
+            <Card
+                devID = {item.devID}
+                temp = {item.temperature}
+                nickname = {item.nickname}
+                onclickDevice = {onclickDevice}
+                onRefresh={onRefresh}
+                refreshing={refreshing}
+            />
+            )} 
+          keyExtractor={(item, index) => index.toString()} 
+          />
+        {renderLoading1()}
+        {renderInternet()}
       </View>
     )
 }
@@ -899,15 +918,12 @@ function Home({navigation}) {
     ),
   });
   return (
-    <Tab.Navigator>
-      <Tab.Screen name="flatList" 
+    <Tab.Navigator mode="card" >
+      <Tab.Screen name="DASHBOARD" 
           component={Games}
-          initialParams={{ refresh: 42 }}
-          options={({ navigation, route }) => ({
-            
-          })} 
+          initialParams={{ refresh: 42 }} 
       />
-      <Tab.Screen name="Main Settings" component={mainSettings} />
+      <Tab.Screen name="MAIN SETTINGS" component={mainSettings} />
     </Tab.Navigator>
   );
 }
@@ -918,7 +934,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="Home" component={Home} /> 
+        <Stack.Screen name="Dashboard" component={Home} /> 
         
         <Stack.Screen name="Device Screen" component={deviceScreen} />
         <Stack.Screen name="Details" component={DetailsScreen} />
